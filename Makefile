@@ -43,6 +43,8 @@ uboot: u-boot/flash.bin
 u-boot/flash.bin: toolchain atf ddr-firmware
 	$(MAKE) -C u-boot imx8mm_venice_defconfig
 	$(MAKE) -C u-boot flash.bin
+	$(MAKE) CROSS_COMPILE= -C u-boot envtools
+	ln -sf fw_printenv u-boot/tools/env/fw_setenv
 
 # kernel
 .PHONY: linux
@@ -86,6 +88,7 @@ ubuntu-image: u-boot/flash.bin linux/arch/arm64/boot/Image linux-venice.tar.xz \
 		-O linux -T kernel -C gzip \
 		-a $(LOADADDR) -e $(LOADADDR) -n "Ubuntu $(UBUNTU_REL)" \
 		-d $(TMP).gz $(TMPDIR)/boot/kernel.itb
+	rm $(TMP).gz
 	# create U-Boot bootscript
 	u-boot/tools/mkimage -A $(ARCH) -T script -C none \
 		-d venice/boot.scr $(TMPDIR)/boot/boot.scr
@@ -99,6 +102,12 @@ ubuntu-image: u-boot/flash.bin linux/arch/arm64/boot/Image linux-venice.tar.xz \
 	dd if=$(UBUNTU_FS) of=$(UBUNTU_IMG) bs=1M seek=16
 	# partition table
 	printf "$$((16*2*1024)),,L,*" | sfdisk -uS $(UBUNTU_IMG)
+	# default U-Boot env
+	$(eval TMP := $(shell mktemp))
+	sed s/firmware.img/$(UBUNTU_IMG)/ venice/fw_env.config > $(TMP)
+	cat $(TMP)
+	u-boot/tools/env/fw_setenv --lock venice/. --config $(TMP) --script venice/venice.env
+	rm $(TMP)
 	# compress
 	gzip -f $(UBUNTU_IMG)
 
