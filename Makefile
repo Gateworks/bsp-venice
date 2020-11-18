@@ -58,7 +58,15 @@ linux-venice.tar.xz: linux/arch/arm64/boot/Image
 	# install dir
 	rm -rf linux/install
 	mkdir -p linux/install/boot
+	# install uncompressed kernel
 	cp linux/arch/arm64/boot/Image linux/install/boot
+	# also install a compressed kernel in a kernel.itb
+	gzip -fk linux/arch/arm64/boot/Image
+	u-boot/tools/mkimage -f auto -A $(ARCH) \
+		-O linux -T kernel -C gzip \
+		-a $(LOADADDR) -e $(LOADADDR) -n "Kernel" \
+		-d linux/arch/arm64/boot/Image.gz linux/install/boot/kernel.itb
+	# install kernel modules
 	make -C linux INSTALL_MOD_STRIP=1 INSTALL_MOD_PATH=install modules_install
 	make -C linux INSTALL_HDR_PATH=install/usr headers_install
 	# cryptodev-linux build/install
@@ -76,19 +84,18 @@ UBUNTU_IMG ?= $(UBUNTU_REL)-venice.img
 $(UBUNTU_REL)-venice.tar.xz:
 	wget -N http://dev.gateworks.com/ubuntu/$(UBUNTU_REL)/$(UBUNTU_REL)-venice.tar.xz
 .PHONY: ubuntu-image
-ubuntu-image: u-boot/flash.bin linux/arch/arm64/boot/Image linux-venice.tar.xz \
-   	      $(UBUNTU_REL)-venice.tar.xz
+#ubuntu-image: u-boot/flash.bin linux/arch/arm64/boot/Image linux-venice.tar.xz \
+#   	      $(UBUNTU_REL)-venice.tar.xz
+ubuntu-image: $(UBUNTU_REL)-venice.tar.xz
 	$(eval TMPDIR := $(shell mktemp -d))
 	$(eval TMP := $(shell mktemp))
 	mkdir -p $(TMPDIR)/boot
 	# create kernel.itb with compressed kernel image
-	cp linux/arch/arm64/boot/Image $(TMP)
-	gzip -f $(TMP)
+	gzip -fk linux/arch/arm64/boot/Image
 	u-boot/tools/mkimage -f auto -A $(ARCH) \
 		-O linux -T kernel -C gzip \
 		-a $(LOADADDR) -e $(LOADADDR) -n "Ubuntu $(UBUNTU_REL)" \
-		-d $(TMP).gz $(TMPDIR)/boot/kernel.itb
-	rm $(TMP).gz
+		-d linux/arch/arm64/boot/Image.gz $(TMPDIR)/boot/kernel.itb
 	# create U-Boot bootscript
 	u-boot/tools/mkimage -A $(ARCH) -T script -C none \
 		-d venice/boot.scr $(TMPDIR)/boot/boot.scr
