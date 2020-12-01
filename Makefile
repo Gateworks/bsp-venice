@@ -92,9 +92,8 @@ UBUNTU_IMG ?= $(UBUNTU_REL)-venice.img
 $(UBUNTU_REL)-venice.tar.xz:
 	wget -N http://dev.gateworks.com/ubuntu/$(UBUNTU_REL)/$(UBUNTU_REL)-venice.tar.xz
 .PHONY: ubuntu-image
-#ubuntu-image: u-boot/flash.bin linux/arch/arm64/boot/Image linux-venice.tar.xz \
-#   	      $(UBUNTU_REL)-venice.tar.xz
-ubuntu-image: $(UBUNTU_REL)-venice.tar.xz
+ubuntu-image: u-boot/flash.bin linux/arch/arm64/boot/Image linux-venice.tar.xz \
+   	      $(UBUNTU_REL)-venice.tar.xz
 	$(eval TMPDIR := $(shell mktemp -d))
 	$(eval TMP := $(shell mktemp))
 	mkdir -p $(TMPDIR)/boot
