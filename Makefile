@@ -37,14 +37,20 @@ $(DDR_FIRMWARE_VER)/firmware/ddr/synopsys:
 	$(SHELL) $(DDR_FIRMWARE_VER).bin --auto-accept
 	for file in $(DDR_FIRMWARE_FILES); do ln -s ../$@/$${file} u-boot/; done
 
+# Gateworks tool for creating binaries for jtag_usbv4
+mkimage_jtag:
+	wget -N http://dev.gateworks.com/jtag/mkimage_jtag
+	chmod +x mkimage_jtag
+
 # uboot
 .PHONY: uboot
 uboot: u-boot/flash.bin
-u-boot/flash.bin: toolchain atf ddr-firmware
+u-boot/flash.bin: toolchain atf ddr-firmware mkimage_jtag
 	$(MAKE) -C u-boot imx8mm_venice_defconfig
 	$(MAKE) -C u-boot flash.bin
 	$(MAKE) CROSS_COMPILE= -C u-boot envtools
 	ln -sf fw_printenv u-boot/tools/env/fw_setenv
+	./mkimage_jtag --emmc -s u-boot/flash.bin@user:erase_none:66-32640 > u-boot_spl.bin
 
 # kernel
 .PHONY: linux
@@ -93,7 +99,7 @@ $(UBUNTU_REL)-venice.tar.xz:
 	wget -N http://dev.gateworks.com/ubuntu/$(UBUNTU_REL)/$(UBUNTU_REL)-venice.tar.xz
 .PHONY: ubuntu-image
 ubuntu-image: u-boot/flash.bin linux/arch/arm64/boot/Image linux-venice.tar.xz \
-   	      $(UBUNTU_REL)-venice.tar.xz
+   	      $(UBUNTU_REL)-venice.tar.xz mkimage_jtag
 	$(eval TMPDIR := $(shell mktemp -d))
 	$(eval TMP := $(shell mktemp))
 	mkdir -p $(TMPDIR)/boot
@@ -122,6 +128,10 @@ ubuntu-image: u-boot/flash.bin linux/arch/arm64/boot/Image linux-venice.tar.xz \
 	cat $(TMP)
 	u-boot/tools/env/fw_setenv --lock venice/. --config $(TMP) --script venice/venice.env
 	rm $(TMP)
+	# create boot-firmware only image
+	dd if=$(UBUNTU_IMG) of=firmware-venice.img bs=1M count=16
+	./mkimage_jtag --emmc -e --partconf=user firmware-venice.img@user:erase_all:0-32640 \
+		> firmware-venice.bin
 	# compress
 	gzip -f $(UBUNTU_IMG)
 
