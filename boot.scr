@@ -23,6 +23,7 @@ setenv fdt_list $fdt_file $fdt_file1 $fdt_file2 $fdt_file3 $fdt_file4 $fdt_file5
 setenv load_fdt 'echo Loading $fdt...; load ${devtype} ${devnum}:${distro_bootpart} ${fdt_addr_r} ${prefix}${fdt} && setenv fdt_addr ${fdt_addr_r}'
 for fdt in ${fdt_list}; do if test -e ${devtype} ${devnum}:${distro_bootpart} ${prefix}${fdt}; then run load_fdt; fi; done
 if test -z "$fdt_addr"; then echo "Warning: Using bootloader DTB"; setenv fdt_addr $fdtcontroladdr; fi
+if test -n "$fixfdt"; then echo "Adjusting FDT"; run fixfdt; fi
 
 # load and boot kernel
 echo "loading kernel..."
