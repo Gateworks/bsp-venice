@@ -85,7 +85,7 @@ linux-venice.tar.xz: linux/arch/arm64/boot/Image
 	make -C cyw-fmac KLIB=$(PWD)/linux KLIB_BUILD=$(PWD)/linux defconfig-brcmfmac
 	chmod +x $(PWD)/cyw-fmac/scripts/make
 	make -C cyw-fmac KLIB=$(PWD)/linux KLIB_BUILD=$(PWD)/linux modules
-	make -C $(PWD)/linux M=$(PWD)/cyw-fmac INSTALL_MOD_PATH=$(PWD)/linux/install modules_install
+	#make -C $(PWD)/linux M=$(PWD)/cyw-fmac INSTALL_MOD_PATH=$(PWD)/linux/install modules_install
 	# wireguard-linux-compat build/install
 	make -C $(PWD)/linux M=$(PWD)/wireguard-linux-compat/src modules
 	make -C $(PWD)/linux M=$(PWD)/wireguard-linux-compat/src INSTALL_MOD_PATH=$(PWD)/linux/install modules_install
