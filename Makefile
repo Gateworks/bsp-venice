@@ -89,11 +89,31 @@ linux-venice.tar.xz: linux/arch/arm64/boot/Image
 	# wireguard-linux-compat build/install
 	make -C $(PWD)/linux M=$(PWD)/wireguard-linux-compat/src modules
 	make -C $(PWD)/linux M=$(PWD)/wireguard-linux-compat/src INSTALL_MOD_PATH=$(PWD)/linux/install modules_install
+	# newracom nrc7292 802.11ah driver
+	make -C nrc7292/package/host/nrc_driver/source/nrc_driver/nrc/ \
+		KDIR=$(PWD)/linux modules
+	make -C $(PWD)/linux \
+		M=$(PWD)/nrc7292/package/host/nrc_driver/source/nrc_driver/nrc/ \
+		INSTALL_MOD_PATH=$(PWD)/linux/install modules_install
+	# neramcom nrc7292 firmware
+	mkdir -p linux/install/lib/firmware
+	cp nrc7292/package/host/evk/sw_pkg/nrc_pkg/sw/firmware/nrc7292_* \
+		linux/install/lib/firmware/
+	# newracom nrc7292 cli app
+	make -C nrc7292/package/host/cli_app/source/cli_app/
+	mkdir -p linux/install/usr/local/bin/
+	cp nrc7292/package/host/cli_app/source/cli_app/cli_app \
+		linux/install/usr/local/bin/
+	# FTDI USB-SPI driver
+	make -C ftdi-usb-spi \
+		KDIR=$(PWD)/linux INSTALL_MOD_PATH=$(PWD)/linux/install \
+		INSTALL_MOD_STRIP=1 \
+		modules modules_install
 	# tarball
 	tar -cvJf linux-venice.tar.xz --numeric-owner -C linux/install .
 
 # ubuntu
-UBUNTU_FSSZMB ?= 1536
+UBUNTU_FSSZMB ?= 1800
 UBUNTU_REL ?= focal
 UBUNTU_FS ?= $(UBUNTU_REL)-venice.ext4
 UBUNTU_IMG ?= $(UBUNTU_REL)-venice.img
