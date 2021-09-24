@@ -81,14 +81,6 @@ linux-venice.tar.xz: linux/arch/arm64/boot/Image
 	make -C cryptodev-linux KERNEL_DIR=../linux
 	make -C cryptodev-linux KERNEL_DIR=../linux DESTDIR=../linux/install \
 		INSTALL_MOD_PATH=../linux/install install
-	# cypress brcmfmac driver
-	make -C cyw-fmac KLIB=$(PWD)/linux KLIB_BUILD=$(PWD)/linux defconfig-brcmfmac
-	chmod +x $(PWD)/cyw-fmac/scripts/make
-	make -C cyw-fmac KLIB=$(PWD)/linux KLIB_BUILD=$(PWD)/linux modules
-	#make -C $(PWD)/linux M=$(PWD)/cyw-fmac INSTALL_MOD_PATH=$(PWD)/linux/install modules_install
-	# wireguard-linux-compat build/install
-	make -C $(PWD)/linux M=$(PWD)/wireguard-linux-compat/src modules
-	make -C $(PWD)/linux M=$(PWD)/wireguard-linux-compat/src INSTALL_MOD_PATH=$(PWD)/linux/install modules_install
 	# newracom nrc7292 802.11ah driver
 	make -C nrc7292/package/host/nrc_driver/source/nrc_driver/nrc/ \
 		KDIR=$(PWD)/linux modules
