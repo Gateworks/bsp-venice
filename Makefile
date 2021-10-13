@@ -155,8 +155,6 @@ clean:
 	make -C atf $(ATF_ARGS) clean
 	make -C linux clean
 	make -C cryptodev-linux clean
-	make -C cyw-fmac KLIB=$(PWD)/linux KLIB_BUILD=$(PWD)/linux clean
-	make -C wireguard-linux-compat/src clean
 	make -C buildroot clean
 	rm -rf linux/install
 	rm -rf $(DDR_FIRMWARE_VER)*
