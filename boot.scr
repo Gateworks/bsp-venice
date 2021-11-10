@@ -10,10 +10,13 @@
 #    - fdt_file{1,2,3,4,5} name of fdt to load
 echo "Venice Boot Script"
 
-# determine root device using uuid
+# determine root device using PARTUUID:
+#  - this avoids any difference beteween uboot's device names/numbers
+#    not matching Linux as device enumeration is not a set API.
+#  - PARTUUID is disk UUID concatenated with partition number
+#    - for MBR disk UUID is unique disk id at offset 440
+#    - for GPT disk UUID is GPT UUID
 part uuid ${devtype} ${devnum}:${distro_bootpart} uuid
-
-# bootargs
 setenv bootargs console=$console root=PARTUUID=${uuid} rootwait $bootargs
 
 # load dtb (we try fdt_file and then fdt_file{1,2,3,4,5})
