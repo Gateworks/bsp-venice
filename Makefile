@@ -57,7 +57,7 @@ u-boot/flash.bin: toolchain atf ddr-firmware mkimage_jtag
 linux: linux/arch/arm64/boot/Image
 linux/arch/arm64/boot/Image: toolchain
 	$(MAKE) -C linux imx8mm_venice_defconfig
-	$(MAKE) -C linux Image dtbs modules
+	$(MAKE) DTC_FLAGS="-@" -C linux Image dtbs modules
 .PHONY: kernel_image
 kernel_image: linux-venice.tar.xz
 linux-venice.tar.xz: linux/arch/arm64/boot/Image
@@ -73,7 +73,7 @@ linux-venice.tar.xz: linux/arch/arm64/boot/Image
 		-a $(LOADADDR) -e $(LOADADDR) -n "Kernel" \
 		-d linux/arch/arm64/boot/Image.gz linux/install/boot/kernel.itb
 	# install dtbs
-	cp linux/arch/arm64/boot/dts/freescale/imx8*-venice-*.dtb linux/install/boot
+	cp linux/arch/arm64/boot/dts/freescale/imx8*-venice-*.dtb* linux/install/boot
 	# install kernel modules
 	make -C linux INSTALL_MOD_STRIP=1 INSTALL_MOD_PATH=install modules_install
 	make -C linux INSTALL_HDR_PATH=install/usr headers_install
