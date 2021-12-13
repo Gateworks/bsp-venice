@@ -102,7 +102,8 @@ linux-venice.tar.xz: linux/arch/arm64/boot/Image
 		INSTALL_MOD_STRIP=1 \
 		modules modules_install
 	# tarball
-	tar -cvJf linux-venice.tar.xz --numeric-owner -C linux/install .
+	tar -cvJf linux-venice.tar.xz --numeric-owner --owner=0 --group=0 \
+		-C linux/install .
 
 # ubuntu
 UBUNTU_FSSZMB ?= 1800
