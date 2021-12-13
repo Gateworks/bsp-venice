@@ -115,22 +115,15 @@ $(UBUNTU_REL)-venice.tar.xz:
 .PHONY: ubuntu-image
 ubuntu-image: u-boot/flash.bin linux/arch/arm64/boot/Image linux-venice.tar.xz \
    	      $(UBUNTU_REL)-venice.tar.xz mkimage_jtag
-	$(eval TMPDIR := $(shell mktemp -d))
-	$(eval TMP := $(shell mktemp))
-	mkdir -p $(TMPDIR)/boot
-	# create kernel.itb with compressed kernel image
-	gzip -fk linux/arch/arm64/boot/Image
-	u-boot/tools/mkimage -f auto -A $(ARCH) \
-		-O linux -T kernel -C gzip \
-		-a $(LOADADDR) -e $(LOADADDR) -n "Ubuntu $(UBUNTU_REL)" \
-		-d linux/arch/arm64/boot/Image.gz $(TMPDIR)/boot/kernel.itb
-	# create U-Boot bootscript
-	u-boot/tools/mkimage -A $(ARCH) -T script -C none \
-		-d venice/boot.scr $(TMPDIR)/boot/boot.scr
 	# root filesystem
 	sudo ./venice/mkfs ext4 $(UBUNTU_FS) $(UBUNTU_FSSZMB)M \
-		$(UBUNTU_REL)-venice.tar.xz linux-venice.tar.xz $(TMPDIR)
-	rm -rf $(TMPDIR)
+		$(UBUNTU_REL)-venice.tar.xz linux-venice.tar.xz
+	# create U-Boot bootscript
+	$(eval TMP=$(shell mktemp -d -t tmp.XXXXXX))
+	sudo mount $(UBUNTU_FS) $(TMP)
+	sudo u-boot/tools/mkimage -A $(ARCH) -T script -C none \
+		-d venice/boot.scr $(TMP)/boot/boot.scr
+	sudo umount $(TMP)
 	# disk image
 	truncate -s $$(($(UBUNTU_FSSZMB) + 16))M $(UBUNTU_IMG)
 	dd if=u-boot/flash.bin of=$(UBUNTU_IMG) bs=1k seek=33 oflag=sync
