@@ -25,7 +25,7 @@ u-boot/bl31.bin: toolchain
 
 # ddr-firmware
 DDR_FIRMWARE_URL:=https://www.nxp.com/lgfiles/NMG/MAD/YOCTO
-DDR_FIRMWARE_VER:=firmware-imx-8.0
+DDR_FIRMWARE_VER:=firmware-imx-8.10
 DDR_FIRMWARE_FILES := \
 	lpddr4_pmu_train_1d_dmem.bin \
 	lpddr4_pmu_train_1d_imem.bin \
