@@ -68,7 +68,7 @@ u-boot/flash.bin: toolchain atf ddr-firmware mkimage_jtag
 	$(MAKE) CROSS_COMPILE= -C u-boot imx8mm_venice_defconfig envtools
 	ln -sf fw_printenv u-boot/tools/env/fw_setenv
 	./mkimage_jtag --emmc -s \
-		u-boot/flash.bin@user:erase_none:$(shell expr $(SPL_OFFSET_KB) \* 2)-32640 > u-boot_spl.bin
+		u-boot/flash.bin@user:erase_none:$(shell expr $(SPL_OFFSET_KB) \* 2)-32640 > venice-$(SOC)_u-boot_spl.bin
 
 # kernel
 .PHONY: linux
@@ -125,7 +125,7 @@ linux-venice.tar.xz: linux/arch/arm64/boot/Image
 UBUNTU_FSSZMB ?= 1800
 UBUNTU_REL ?= focal
 UBUNTU_FS ?= $(UBUNTU_REL)-venice.ext4
-UBUNTU_IMG ?= $(UBUNTU_REL)-venice.img
+UBUNTU_IMG ?= $(UBUNTU_REL)-venice-$(SOC).img
 $(UBUNTU_REL)-venice.tar.xz:
 	wget -N http://dev.gateworks.com/ubuntu/$(UBUNTU_REL)/$(UBUNTU_REL)-venice.tar.xz
 $(UBUNTU_FS): linux-venice.tar.xz $(UBUNTU_REL)-venice.tar.xz
