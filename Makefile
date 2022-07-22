@@ -128,12 +128,12 @@ UBUNTU_FS ?= $(UBUNTU_REL)-venice.ext4
 UBUNTU_IMG ?= $(UBUNTU_REL)-venice.img
 $(UBUNTU_REL)-venice.tar.xz:
 	wget -N http://dev.gateworks.com/ubuntu/$(UBUNTU_REL)/$(UBUNTU_REL)-venice.tar.xz
-.PHONY: ubuntu-image
-ubuntu-image: u-boot/flash.bin linux/arch/arm64/boot/Image linux-venice.tar.xz \
-   	      $(UBUNTU_REL)-venice.tar.xz mkimage_jtag
+$(UBUNTU_FS): linux-venice.tar.xz $(UBUNTU_REL)-venice.tar.xz
 	# root filesystem
 	sudo ./venice/mkfs ext4 $(UBUNTU_FS) $(UBUNTU_FSSZMB)M \
 		$(UBUNTU_REL)-venice.tar.xz linux-venice.tar.xz
+.PHONY: ubuntu-image
+ubuntu-image: u-boot/flash.bin linux/arch/arm64/boot/Image $(UBUNTU_FS) mkimage_jtag
 	# create U-Boot bootscript
 	$(eval TMP=$(shell mktemp -d -t tmp.XXXXXX))
 	sudo mount $(UBUNTU_FS) $(TMP)
