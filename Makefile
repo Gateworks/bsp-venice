@@ -48,7 +48,7 @@ uboot: u-boot/flash.bin
 u-boot/flash.bin: toolchain atf ddr-firmware mkimage_jtag
 	$(MAKE) -C u-boot imx8mm_venice_defconfig
 	$(MAKE) -C u-boot flash.bin
-	$(MAKE) CROSS_COMPILE= -C u-boot envtools
+	$(MAKE) CROSS_COMPILE= -C u-boot imx8mm_venice_defconfig envtools
 	ln -sf fw_printenv u-boot/tools/env/fw_setenv
 	./mkimage_jtag --emmc -s u-boot/flash.bin@user:erase_none:66-32640 > u-boot_spl.bin
 
