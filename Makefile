@@ -1,5 +1,22 @@
 SHELL = /bin/sh
 
+# SOC can be imx8mm|imx8mn|imx8mp
+# Note that SOC is relevant for ATF and U-Boot but both buildroot and Linux
+# support all variants with the imx8mm_venice_defconfig config file
+SOC ?= imx8mm
+ifeq ($(SOC), imx8mm)
+SPL_OFFSET_KB=33
+endif
+ifeq ($(SOC), imx8mn)
+SPL_OFFSET_KB=32
+endif
+ifeq ($(SOC), imx8mp)
+SPL_OFFSET_KB=32
+endif
+ifeq ($(SPL_OFFSET_KB),)
+$(error "Error: Unknown platform. Please use SOC=<imx8mm|imx8mn|imx8mp> to specify the platform")
+endif
+
 .PHONY: all
 all: ubuntu-image
 
@@ -17,11 +34,11 @@ buildroot:
 
 # ATF
 .PHONY: atf
-ATF_ARGS ?= PLAT=imx8mm
+ATF_ARGS ?= PLAT=$(SOC)
 atf: u-boot/bl31.bin
 u-boot/bl31.bin: toolchain
 	$(MAKE) -C atf $(ATF_ARGS) bl31
-	ln -sf ../atf/build/imx8mm/release/bl31.bin u-boot/
+	ln -sf ../atf/build/$(SOC)/release/bl31.bin u-boot/
 
 # ddr-firmware
 DDR_FIRMWARE_URL:=https://www.nxp.com/lgfiles/NMG/MAD/YOCTO
@@ -50,7 +67,8 @@ u-boot/flash.bin: toolchain atf ddr-firmware mkimage_jtag
 	$(MAKE) -C u-boot flash.bin
 	$(MAKE) CROSS_COMPILE= -C u-boot imx8mm_venice_defconfig envtools
 	ln -sf fw_printenv u-boot/tools/env/fw_setenv
-	./mkimage_jtag --emmc -s u-boot/flash.bin@user:erase_none:66-32640 > u-boot_spl.bin
+	./mkimage_jtag --emmc -s \
+		u-boot/flash.bin@user:erase_none:$(shell expr $(SPL_OFFSET_KB) \* 2)-32640 > u-boot_spl.bin
 
 # kernel
 .PHONY: linux
@@ -124,7 +142,7 @@ ubuntu-image: u-boot/flash.bin linux/arch/arm64/boot/Image linux-venice.tar.xz \
 	sudo umount $(TMP)
 	# disk image
 	truncate -s $$(($(UBUNTU_FSSZMB) + 16))M $(UBUNTU_IMG)
-	dd if=u-boot/flash.bin of=$(UBUNTU_IMG) bs=1k seek=33 oflag=sync
+	dd if=u-boot/flash.bin of=$(UBUNTU_IMG) bs=1k seek=$(SPL_OFFSET_KB) oflag=sync
 	dd if=$(UBUNTU_FS) of=$(UBUNTU_IMG) bs=1M seek=16
 	# partition table
 	printf "$$((16*2*1024)),,L,*" | sfdisk -uS $(UBUNTU_IMG)
@@ -137,7 +155,7 @@ ubuntu-image: u-boot/flash.bin linux/arch/arm64/boot/Image linux-venice.tar.xz \
 	# create boot-firmware only image
 	dd if=$(UBUNTU_IMG) of=firmware-venice.img bs=1M count=16
 	./mkimage_jtag --emmc -e --partconf=user firmware-venice.img@user:erase_all:0-32640 \
-		> firmware-venice.bin
+		> firmware-venice-$(SOC).bin
 	# compress
 	gzip -f $(UBUNTU_IMG)
 
