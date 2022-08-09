@@ -151,6 +151,9 @@ ubuntu-image: u-boot/flash.bin linux/arch/arm64/boot/Image $(UBUNTU_FS) mkimage_
 	sed s/firmware.img/$(UBUNTU_IMG)/ venice/fw_env.config > $(TMP)
 	cat $(TMP)
 	u-boot/tools/env/fw_setenv --lock venice/. --config $(TMP) --script venice/venice.env
+	u-boot/tools/env/fw_setenv --lock venice/. --config $(TMP) soc $(SOC)
+	u-boot/tools/env/fw_setenv --lock venice/. --config $(TMP) \
+		splblk $(shell printf "0x%02x" $(shell expr $(SPL_OFFSET_KB) \* 2))
 	rm $(TMP)
 	# create boot-firmware only image
 	dd if=$(UBUNTU_IMG) of=firmware-venice.img bs=1M count=16
