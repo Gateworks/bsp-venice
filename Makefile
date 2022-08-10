@@ -47,12 +47,15 @@ DDR_FIRMWARE_FILES := \
 	lpddr4_pmu_train_1d_dmem.bin \
 	lpddr4_pmu_train_1d_imem.bin \
 	lpddr4_pmu_train_2d_dmem.bin \
-	lpddr4_pmu_train_2d_imem.bin
+	lpddr4_pmu_train_2d_imem.bin \
+	lpddr4_pmu_train_1d_dmem_202006.bin \
+	lpddr4_pmu_train_1d_imem_202006.bin \
+	lpddr4_pmu_train_2d_dmem_202006.bin \
+	lpddr4_pmu_train_2d_imem_202006.bin
 ddr-firmware: $(DDR_FIRMWARE_VER)/firmware/ddr/synopsys
 $(DDR_FIRMWARE_VER)/firmware/ddr/synopsys:
 	wget -N $(DDR_FIRMWARE_URL)/$(DDR_FIRMWARE_VER).bin
 	$(SHELL) $(DDR_FIRMWARE_VER).bin --auto-accept
-	for file in $(DDR_FIRMWARE_FILES); do ln -s ../$@/$${file} u-boot/; done
 
 # Gateworks tool for creating binaries for jtag_usbv4
 mkimage_jtag:
@@ -63,6 +66,9 @@ mkimage_jtag:
 .PHONY: uboot
 uboot: u-boot/flash.bin
 u-boot/flash.bin: toolchain atf ddr-firmware mkimage_jtag
+	for file in $(DDR_FIRMWARE_FILES); do \
+		cp $(DDR_FIRMWARE_VER)/firmware/ddr/synopsys/$${file} u-boot/; \
+	done
 	$(MAKE) -C u-boot $(SOC)_venice_defconfig
 	$(MAKE) -C u-boot flash.bin
 	$(MAKE) CROSS_COMPILE= -C u-boot $(SOC)_venice_defconfig envtools
