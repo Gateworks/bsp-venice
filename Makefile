@@ -128,8 +128,8 @@ linux-venice.tar.xz: linux/arch/arm64/boot/Image
 		-C linux/install .
 
 # ubuntu
-UBUNTU_FSSZMB ?= 1800
-UBUNTU_REL ?= focal
+UBUNTU_FSSZMB ?= 2048
+UBUNTU_REL ?= jammy
 UBUNTU_FS ?= $(UBUNTU_REL)-venice.ext4
 UBUNTU_IMG ?= $(UBUNTU_REL)-venice-$(SOC).img
 $(UBUNTU_REL)-venice.tar.xz:
