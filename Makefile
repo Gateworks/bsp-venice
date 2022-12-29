@@ -163,7 +163,7 @@ ubuntu-image: u-boot/flash.bin linux/arch/arm64/boot/Image $(UBUNTU_FS) mkimage_
 	rm $(TMP)
 	# create boot-firmware only image
 	dd if=$(UBUNTU_IMG) of=firmware-venice.img bs=1M count=16
-	./mkimage_jtag --emmc -e --partconf=user firmware-venice.img@user:erase_all:0-32640 \
+	./mkimage_jtag --emmc -s --partconf=user firmware-venice.img@user:erase_part:0-32768 \
 		> firmware-venice-$(SOC).bin
 	# compress
 	gzip -f $(UBUNTU_IMG)
