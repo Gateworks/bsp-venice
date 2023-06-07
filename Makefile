@@ -1,22 +1,5 @@
 SHELL = /bin/sh
 
-# SOC can be imx8mm|imx8mn|imx8mp
-# Note that SOC is relevant for ATF and U-Boot but both buildroot and Linux
-# support all variants with the imx8mm_venice_defconfig config file
-SOC ?= imx8mm
-ifeq ($(SOC), imx8mm)
-SPL_OFFSET_KB=33
-endif
-ifeq ($(SOC), imx8mn)
-SPL_OFFSET_KB=32
-endif
-ifeq ($(SOC), imx8mp)
-SPL_OFFSET_KB=32
-endif
-ifeq ($(SPL_OFFSET_KB),)
-$(error "Error: Unknown platform. Please use SOC=<imx8mm|imx8mn|imx8mp> to specify the platform")
-endif
-
 .PHONY: all
 all: ubuntu-image
 
@@ -31,14 +14,6 @@ buildroot/output/host/bin/aarch64-linux-gcc:
 .PHONY: buildroot
 buildroot:
 	$(MAKE) -C buildroot imx8mm_venice_defconfig all
-
-# ATF
-.PHONY: atf
-ATF_ARGS ?= PLAT=$(SOC)
-atf: u-boot/bl31.bin
-u-boot/bl31.bin: toolchain
-	$(MAKE) -C atf $(ATF_ARGS) bl31
-	ln -sf ../atf/build/$(SOC)/release/bl31.bin u-boot/
 
 # ddr-firmware
 DDR_FIRMWARE_URL:=https://www.nxp.com/lgfiles/NMG/MAD/YOCTO
@@ -63,18 +38,71 @@ mkimage_jtag:
 	chmod +x mkimage_jtag
 
 # uboot
+.NOTPARALLEL: venice-imx8mm-flash.bin imx8mn-flash.bin imx8mp-flash.bin uboot-envtools
 .PHONY: uboot
-uboot: u-boot/flash.bin
-u-boot/flash.bin: toolchain atf ddr-firmware mkimage_jtag
+uboot: venice-imx8mm-flash.bin venice-imx8mn-flash.bin venice-imx8mp-flash.bin
+venice-imx8mm-flash.bin: toolchain atf ddr-firmware mkimage_jtag
 	for file in $(DDR_FIRMWARE_FILES); do \
 		cp $(DDR_FIRMWARE_VER)/firmware/ddr/synopsys/$${file} u-boot/; \
 	done
-	$(MAKE) -C u-boot $(SOC)_venice_defconfig
+	$(MAKE) -C atf PLAT=imx8mm bl31
+	ln -sf ../atf/build/imx8mm/release/bl31.bin u-boot/
+	$(MAKE) -C u-boot imx8mm_venice_defconfig
 	$(MAKE) -C u-boot flash.bin
-	$(MAKE) CROSS_COMPILE= -C u-boot $(SOC)_venice_defconfig envtools
+	cp u-boot/flash.bin venice-imx8mm-flash.bin
+
+venice-imx8mn-flash.bin: toolchain atf ddr-firmware mkimage_jtag
+	for file in $(DDR_FIRMWARE_FILES); do \
+		cp $(DDR_FIRMWARE_VER)/firmware/ddr/synopsys/$${file} u-boot/; \
+	done
+	$(MAKE) -C atf PLAT=imx8mn bl31
+	ln -sf ../atf/build/imx8mn/release/bl31.bin u-boot/
+	$(MAKE) -C u-boot imx8mn_venice_defconfig
+	$(MAKE) -C u-boot flash.bin
+	cp u-boot/flash.bin venice-imx8mn-flash.bin
+
+venice-imx8mp-flash.bin: toolchain atf ddr-firmware mkimage_jtag
+	for file in $(DDR_FIRMWARE_FILES); do \
+		cp $(DDR_FIRMWARE_VER)/firmware/ddr/synopsys/$${file} u-boot/; \
+	done
+	$(MAKE) -C atf PLAT=imx8mp bl31
+	ln -sf ../atf/build/imx8mp/release/bl31.bin u-boot/
+	$(MAKE) -C u-boot imx8mp_venice_defconfig
+	$(MAKE) -C u-boot flash.bin
+	cp u-boot/flash.bin venice-imx8mp-flash.bin
+
+.PHONY: uboot-envtools
+uboot-envtools: u-boot/tools/env/fw_setenv
+u-boot/tools/env/fw_setenv:
+	$(MAKE) CROSS_COMPILE= -C u-boot imx8mm_venice_defconfig envtools
 	ln -sf fw_printenv u-boot/tools/env/fw_setenv
-	./mkimage_jtag --emmc -s \
-		u-boot/flash.bin@user:erase_none:$(shell expr $(SPL_OFFSET_KB) \* 2)-32640 > venice-$(SOC)_u-boot_spl.bin
+
+# JTAG images of boot firmware only and boot firmware + environment
+.PHONY: firmware-image
+firmware-image: venice-imx8mm-flash.bin venice-imx8mn-flash.bin venice-imx8mp-flash.bin uboot-envtools
+	# start with uboot env at end of 4MiB (per venice/fw_env.config)
+	truncate -s 4M firmware.img
+	u-boot/tools/env/fw_setenv --lock venice/. --config venice/fw_env.config --script venice/venice.env
+	dd if=firmware.img of=uboot-env.bin bs=1k skip=4032 count=64 oflag=sync
+	# copy boot firmware to SOC specific offset for eMMC boot0 partition
+	cp firmware.img firmware-venice-imx8mm.img
+	dd if=venice-imx8mm-flash.bin of=firmware-venice-imx8mm.img bs=1k seek=33 oflag=sync conv=notrunc
+	cp firmware.img firmware-venice-imx8mn.img
+	dd if=venice-imx8mn-flash.bin of=firmware-venice-imx8mn.img bs=1k seek=0 oflag=sync conv=notrunc
+	cp firmware.img firmware-venice-imx8mp.img
+	dd if=venice-imx8mp-flash.bin of=firmware-venice-imx8mp.img bs=1k seek=0 oflag=sync conv=notrunc
+	# create boot-firmware JTAG image (bootloader + env) for boot0
+	./mkimage_jtag --emmc -s --partconf=boot0 \
+		firmware-venice-imx8mm.img@boot0:erase_part:0-8192 \
+		> firmware-venice-imx8mm.bin
+	./mkimage_jtag --emmc -s --partconf=boot0 \
+		firmware-venice-imx8mn.img@boot0:erase_part:0-8192 \
+		> firmware-venice-imx8mn.bin
+	./mkimage_jtag --emmc -s --partconf=boot0 \
+		firmware-venice-imx8mp.img@boot0:erase_part:0-8192 \
+		> firmware-venice-imx8mp.bin
+	# cleanup
+	rm firmware.img
 
 # kernel
 .PHONY: linux
@@ -128,10 +156,11 @@ linux-venice.tar.xz: linux/arch/arm64/boot/Image
 		-C linux/install .
 
 # ubuntu
+PART_OFFSETMB ?= 16
 UBUNTU_FSSZMB ?= 2048
 UBUNTU_REL ?= jammy
 UBUNTU_FS ?= $(UBUNTU_REL)-venice.ext4
-UBUNTU_IMG ?= $(UBUNTU_REL)-venice-$(SOC).img
+UBUNTU_IMG ?= $(UBUNTU_REL)-venice.img
 $(UBUNTU_REL)-venice.tar.xz:
 	wget -N http://dev.gateworks.com/ubuntu/$(UBUNTU_REL)/$(UBUNTU_REL)-venice.tar.xz
 $(UBUNTU_FS): linux-venice.tar.xz $(UBUNTU_REL)-venice.tar.xz
@@ -139,7 +168,7 @@ $(UBUNTU_FS): linux-venice.tar.xz $(UBUNTU_REL)-venice.tar.xz
 	sudo ./venice/mkfs ext4 $(UBUNTU_FS) $(UBUNTU_FSSZMB)M \
 		$(UBUNTU_REL)-venice.tar.xz linux-venice.tar.xz
 .PHONY: ubuntu-image
-ubuntu-image: u-boot/flash.bin linux/arch/arm64/boot/Image $(UBUNTU_FS) mkimage_jtag
+ubuntu-image: linux/arch/arm64/boot/Image $(UBUNTU_FS) mkimage_jtag
 	# create U-Boot bootscript
 	$(eval TMP=$(shell mktemp -d -t tmp.XXXXXX))
 	sudo mount $(UBUNTU_FS) $(TMP)
@@ -147,34 +176,29 @@ ubuntu-image: u-boot/flash.bin linux/arch/arm64/boot/Image $(UBUNTU_FS) mkimage_
 		-d venice/boot.scr $(TMP)/boot/boot.scr
 	sudo umount $(TMP)
 	# disk image
-	truncate -s $$(($(UBUNTU_FSSZMB) + 16))M $(UBUNTU_IMG)
-	dd if=u-boot/flash.bin of=$(UBUNTU_IMG) bs=1k seek=$(SPL_OFFSET_KB) oflag=sync
-	dd if=$(UBUNTU_FS) of=$(UBUNTU_IMG) bs=1M seek=16
+	truncate -s $$(($(UBUNTU_FSSZMB) + $(PART_OFFSETMB)))M $(UBUNTU_IMG)
+	dd if=$(UBUNTU_FS) of=$(UBUNTU_IMG) bs=1M seek=$(PART_OFFSETMB)
 	# partition table
-	printf "$$((16*2*1024)),,L,*" | sfdisk -uS $(UBUNTU_IMG)
-	# default U-Boot env
-	$(eval TMP := $(shell mktemp))
-	sed s/firmware.img/$(UBUNTU_IMG)/ venice/fw_env.config > $(TMP)
-	cat $(TMP)
-	u-boot/tools/env/fw_setenv --lock venice/. --config $(TMP) --script venice/venice.env
-	u-boot/tools/env/fw_setenv --lock venice/. --config $(TMP) soc $(SOC)
-	u-boot/tools/env/fw_setenv --lock venice/. --config $(TMP) \
-		splblk $(shell printf "0x%02x" $(shell expr $(SPL_OFFSET_KB) \* 2))
-	rm $(TMP)
-	# create boot-firmware only image
-	dd if=$(UBUNTU_IMG) of=firmware-venice.img bs=1M count=16
-	./mkimage_jtag --emmc -s --partconf=user firmware-venice.img@user:erase_part:0-32768 \
-		> firmware-venice-$(SOC).bin
+	printf "$$(($(PART_OFFSETMB)*2*1024)),,L,*" | sfdisk -uS $(UBUNTU_IMG)
+	# copy imx8mm boot firmware so that running 'update_all' script in
+	# uboot for imx8mm users that have boot firmware on emmc user partition
+	# do not brick their board
+	dd if=venice-imx8mm-flash.bin of=$(UBUNTU_IMG) bs=1k seek=33 oflag=sync conv=notrunc
+	dd if=uboot-env.bin of=$(UBUNTU_IMG) bs=1k seek=4032 oflag=sync conv=notrunc
 	# compress
 	gzip -f $(UBUNTU_IMG)
 
 .PHONY: clean
 clean:
 	make -C u-boot clean
-	make -C atf $(ATF_ARGS) clean
+	make -C atf PLAT=imx8mm clean
+	make -C atf PLAT=imx8mn clean
+	make -C atf PLAT=imx8mp clean
 	make -C linux clean
-	make -C cryptodev-linux clean
+	make -C cryptodev-linux KERNEL_DIR=../linux clean
 	make -C buildroot clean
+	rm venice-*-flash.bin
+	rm firmware-venice-*.bin
 	rm -rf linux/install
 	rm -rf $(DDR_FIRMWARE_VER)*
 	rm -rf u-boot/lpddr4_pmu_*.bin
@@ -184,8 +208,12 @@ clean:
 .PHONY: distclean
 distclean:
 	make -C u-boot distclean
-	make -C atf $(ATF_ARGS) distclean
+	make -C atf PLAT=imx8mm distclean
+	make -C atf PLAT=imx8mn distclean
+	make -C atf PLAT=imx8mp distclean
 	make -C linux distclean
 	make -C buildroot distclean
+	rm venice-*-flash.bin
+	rm firmware-venice-*.bin
 	rm -rf linux/install
 	rm -rf $(DDR_FIRMWARE_VER)
