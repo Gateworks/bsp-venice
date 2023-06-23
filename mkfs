@@ -63,7 +63,7 @@ esac
 
 # mount it
 tmp_mnt=$(mktemp -d -p/tmp)
-mount $OUT ${tmp_mnt}
+mount $OUT ${tmp_mnt} || exit 1
 
 # copy/extract files to it
 echo "Populating $OUT..."

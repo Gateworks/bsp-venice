@@ -166,15 +166,15 @@ $(UBUNTU_REL)-venice.tar.xz:
 $(UBUNTU_FS): linux-venice.tar.xz $(UBUNTU_REL)-venice.tar.xz
 	# root filesystem
 	sudo ./venice/mkfs ext4 $(UBUNTU_FS) $(UBUNTU_FSSZMB)M \
-		$(UBUNTU_REL)-venice.tar.xz linux-venice.tar.xz
+		$(UBUNTU_REL)-venice.tar.xz linux-venice.tar.xz || exit 1
 .PHONY: ubuntu-image
 ubuntu-image: linux/arch/arm64/boot/Image $(UBUNTU_FS) mkimage_jtag
 	# create U-Boot bootscript
 	$(eval TMP=$(shell mktemp -d -t tmp.XXXXXX))
-	sudo mount $(UBUNTU_FS) $(TMP)
+	sudo mount $(UBUNTU_FS) $(TMP) || exit 1
 	sudo u-boot/tools/mkimage -A $(ARCH) -T script -C none \
 		-d venice/boot.scr $(TMP)/boot/boot.scr
-	sudo umount $(TMP)
+	sudo umount $(TMP) || exit 1
 	# disk image
 	truncate -s $$(($(UBUNTU_FSSZMB) + $(PART_OFFSETMB)))M $(UBUNTU_IMG)
 	dd if=$(UBUNTU_FS) of=$(UBUNTU_IMG) bs=1M seek=$(PART_OFFSETMB)
