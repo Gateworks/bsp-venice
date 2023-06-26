@@ -112,7 +112,7 @@ linux/arch/arm64/boot/Image: toolchain
 	$(MAKE) DTC_FLAGS="-@" -C linux Image dtbs modules
 .PHONY: kernel_image
 kernel_image: linux-venice.tar.xz
-linux-venice.tar.xz: linux/arch/arm64/boot/Image
+linux-venice.tar.xz: linux/arch/arm64/boot/Image venice-imx8mm-flash.bin
 	# install dir
 	rm -rf linux/install
 	mkdir -p linux/install/boot
@@ -175,6 +175,7 @@ ubuntu-image: linux/arch/arm64/boot/Image $(UBUNTU_FS) mkimage_jtag
 	sudo u-boot/tools/mkimage -A $(ARCH) -T script -C none \
 		-d venice/boot.scr $(TMP)/boot/boot.scr
 	sudo umount $(TMP) || exit 1
+	rmdir $(TMP)
 	# disk image
 	truncate -s $$(($(UBUNTU_FSSZMB) + $(PART_OFFSETMB)))M $(UBUNTU_IMG)
 	dd if=$(UBUNTU_FS) of=$(UBUNTU_IMG) bs=1M seek=$(PART_OFFSETMB)
@@ -197,8 +198,8 @@ clean:
 	make -C linux clean
 	make -C cryptodev-linux KERNEL_DIR=../linux clean
 	make -C buildroot clean
-	rm venice-*-flash.bin
-	rm firmware-venice-*.bin
+	rm -f venice-*-flash.bin
+	rm -f firmware-venice-*.bin
 	rm -rf linux/install
 	rm -rf $(DDR_FIRMWARE_VER)*
 	rm -rf u-boot/lpddr4_pmu_*.bin
@@ -213,7 +214,7 @@ distclean:
 	make -C atf PLAT=imx8mp distclean
 	make -C linux distclean
 	make -C buildroot distclean
-	rm venice-*-flash.bin
-	rm firmware-venice-*.bin
+	rm -f venice-*-flash.bin
+	rm -f firmware-venice-*.bin
 	rm -rf linux/install
 	rm -rf $(DDR_FIRMWARE_VER)
