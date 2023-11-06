@@ -92,13 +92,13 @@ firmware-image: venice-imx8mm-flash.bin venice-imx8mn-flash.bin venice-imx8mp-fl
 	cp firmware.img firmware-venice-imx8mp.img
 	dd if=venice-imx8mp-flash.bin of=firmware-venice-imx8mp.img bs=1k seek=0 oflag=sync conv=notrunc
 	# create boot-firmware JTAG image (bootloader + env) for boot0
-	./mkimage_jtag --emmc -s --partconf=boot0 \
+	./mkimage_jtag --soc imx8mm --emmc -s --partconf=boot0 \
 		firmware-venice-imx8mm.img@boot0:erase_part:0-8192 \
 		> firmware-venice-imx8mm.bin
-	./mkimage_jtag --emmc -s --partconf=boot0 \
+	./mkimage_jtag --soc imx8mn --emmc -s --partconf=boot0 \
 		firmware-venice-imx8mn.img@boot0:erase_part:0-8192 \
 		> firmware-venice-imx8mn.bin
-	./mkimage_jtag --emmc -s --partconf=boot0 \
+	./mkimage_jtag --soc imx8mp --emmc -s --partconf=boot0 \
 		firmware-venice-imx8mp.img@boot0:erase_part:0-8192 \
 		> firmware-venice-imx8mp.bin
 	# cleanup
