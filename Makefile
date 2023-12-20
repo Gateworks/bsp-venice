@@ -108,7 +108,10 @@ firmware-image: venice-imx8mm-flash.bin venice-imx8mn-flash.bin venice-imx8mp-fl
 .PHONY: linux
 linux: linux/arch/arm64/boot/Image
 linux/arch/arm64/boot/Image: toolchain
-	$(MAKE) -C linux imx8mm_venice_defconfig
+	[ -r linux/arch/arm64/configs/imx8m_venice_defconfig ] || { \
+		ln -s imx8mm_venice_defconfig linux/arch/arm64/configs/imx8m_venice_defconfig; \
+	}
+	$(MAKE) -C linux imx8m_venice_defconfig
 	$(MAKE) DTC_FLAGS="-@" -C linux Image dtbs modules
 .PHONY: kernel_image
 kernel_image: linux-venice.tar.xz
