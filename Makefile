@@ -105,6 +105,7 @@ firmware-image: venice-imx8mm-flash.bin venice-imx8mn-flash.bin venice-imx8mp-fl
 	rm firmware.img
 
 # kernel
+KVER = $(shell cd linux; $(MAKE) kernelversion)
 .PHONY: linux
 linux: linux/arch/arm64/boot/Image
 linux/arch/arm64/boot/Image: toolchain
@@ -136,6 +137,7 @@ linux-venice.tar.xz: linux/arch/arm64/boot/Image venice-imx8mm-flash.bin
 	make -C cryptodev-linux KERNEL_DIR=../linux
 	make -C cryptodev-linux KERNEL_DIR=../linux DESTDIR=../linux/install \
 		INSTALL_MOD_PATH=../linux/install install
+ifeq ($(shell expr ${KVER} == "5.15.15"),1)
 	# newracom nrc7292 802.11ah driver
 	make -C nrc7292/package/host/src/nrc/ KDIR=$(PWD)/linux modules
 	make -C nrc7292/package/host/src/nrc/ KDIR=$(PWD)/linux \
@@ -154,6 +156,7 @@ linux-venice.tar.xz: linux/arch/arm64/boot/Image venice-imx8mm-flash.bin
 		KDIR=$(PWD)/linux INSTALL_MOD_PATH=$(PWD)/linux/install \
 		INSTALL_MOD_STRIP=1 \
 		modules modules_install
+endif
 	# tarball
 	tar -cvJf linux-venice.tar.xz --numeric-owner --owner=0 --group=0 \
 		-C linux/install .
