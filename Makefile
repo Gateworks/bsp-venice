@@ -113,7 +113,11 @@ linux/arch/arm64/boot/Image: toolchain
 		ln -s imx8mm_venice_defconfig linux/arch/arm64/configs/imx8m_venice_defconfig; \
 	}
 	$(MAKE) -C linux imx8m_venice_defconfig
+ifeq ($(shell expr ${KVER} == "5.15.15"),1)
 	$(MAKE) DTC_FLAGS="-@" -C linux Image dtbs modules
+else
+	$(MAKE) -C linux Image dtbs modules
+endif
 .PHONY: kernel_image
 kernel_image: linux-venice.tar.xz
 linux-venice.tar.xz: linux/arch/arm64/boot/Image venice-imx8mm-flash.bin
