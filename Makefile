@@ -122,46 +122,42 @@ endif
 kernel_image: linux-venice.tar.xz
 linux-venice.tar.xz: linux/arch/arm64/boot/Image venice-imx8mm-flash.bin
 	# install dir
-	rm -rf linux/install
-	mkdir -p linux/install/boot
+	rm -rf build/linux
+	mkdir -p build/linux/boot
 	# install uncompressed kernel
-	cp linux/arch/arm64/boot/Image linux/install/boot
+	cp linux/arch/arm64/boot/Image build/linux/boot
 	# install a compressed kernel in a kernel.itb
 	gzip -fk linux/arch/arm64/boot/Image
 	u-boot/tools/mkimage -f auto -A $(ARCH) \
 		-O linux -T kernel -C gzip \
 		-a $(LOADADDR) -e $(LOADADDR) -n "Kernel" \
-		-d linux/arch/arm64/boot/Image.gz linux/install/boot/kernel.itb
+		-d linux/arch/arm64/boot/Image.gz build/linux/boot/kernel.itb
 	# install dtbs
-	cp linux/arch/arm64/boot/dts/freescale/imx8*-venice-*.dtb* linux/install/boot
+	cp linux/arch/arm64/boot/dts/freescale/imx8*-venice-*.dtb* build/linux/boot
 	# install kernel modules
-	make -C linux INSTALL_MOD_STRIP=1 INSTALL_MOD_PATH=install modules_install
-	make -C linux INSTALL_HDR_PATH=install/usr headers_install
-	# cryptodev-linux build/install
-	make -C cryptodev-linux KERNEL_DIR=../linux
-	make -C cryptodev-linux KERNEL_DIR=../linux DESTDIR=../linux/install \
-		INSTALL_MOD_PATH=../linux/install install
-	# newracom nrc7292 802.11ah driver
-	make -C nrc7292/package/src/nrc/ KDIR=$(PWD)/linux modules
-	make -C nrc7292/package/src/nrc/ KDIR=$(PWD)/linux \
-		INSTALL_MOD_PATH=$(PWD)/linux/install modules_install
+	make -C linux INSTALL_MOD_STRIP=1 INSTALL_MOD_PATH=../build/linux modules_install
+	find build/linux/lib/modules/ -name build -exec rm {} \; # remove the bogus symlink
+	#install user space linux headers
+	make -C linux INSTALL_HDR_PATH=../build/linux/usr headers_install
 	# neramcom nrc7292 firmware
-	mkdir -p linux/install/lib/firmware
+	mkdir -p build/linux/lib/firmware
 	cp nrc7292/package/evk/sw_pkg/nrc_pkg/sw/firmware/nrc7292_* \
-		linux/install/lib/firmware/
+		build/linux/lib/firmware/
 	# newracom nrc7292 cli app
 	make CC=$(CROSS_COMPILE)gcc LFLAGS=-static -C nrc7292/package/src/cli_app/
-	mkdir -p linux/install/usr/local/bin/
+	mkdir -p build/linux/usr/local/bin/
 	cp nrc7292/package/src/cli_app/cli_app \
-		linux/install/usr/local/bin/
+		build/linux/usr/local/bin/
 	# FTDI USB-SPI driver
 	make -C ftdi-usb-spi \
-		KDIR=$(PWD)/linux INSTALL_MOD_PATH=$(PWD)/linux/install \
+		KDIR=$(PWD)/linux INSTALL_MOD_PATH=$(PWD)/build/linux \
 		INSTALL_MOD_STRIP=1 \
 		modules modules_install
+	# install kernel headers needed for building external modules ( aka linux-devel )
+	./venice/configure_kernel_headers.sh $(PWD)/linux $(PWD)/build/linux
 	# tarball
 	tar -cvJf linux-venice.tar.xz --numeric-owner --owner=0 --group=0 \
-		-C linux/install .
+		-C build/linux .
 
 # ubuntu
 PART_OFFSETMB ?= 16
@@ -208,7 +204,7 @@ clean:
 	make -C buildroot clean
 	rm -f venice-*-flash.bin
 	rm -f firmware-venice-*.bin
-	rm -rf linux/install
+	rm -rf build
 	rm -rf $(DDR_FIRMWARE_VER)*
 	rm -rf u-boot/lpddr4_pmu_*.bin
 	rm -rf linux-venice.tar.xz
@@ -224,5 +220,5 @@ distclean:
 	make -C buildroot distclean
 	rm -f venice-*-flash.bin
 	rm -f firmware-venice-*.bin
-	rm -rf linux/install
+	rm -rf build
 	rm -rf $(DDR_FIRMWARE_VER)
