@@ -83,7 +83,10 @@ firmware-image: venice-imx8mm-flash.bin venice-imx8mn-flash.bin venice-imx8mp-fl
 	# start with uboot env at end of 4MiB (per venice/fw_env.config)
 	truncate -s 4M firmware.img
 	u-boot/tools/env/fw_setenv --lock venice/. --config venice/fw_env.config --script venice/venice.env
+	# keep copy of env as uboot-env.bin to use later
 	dd if=firmware.img of=uboot-env.bin bs=1k skip=4032 count=64 oflag=sync
+	# copy backup of uboot env right underneath default env (to allow easy restore of env)
+	dd if=uboot-env.bin of=firmware.img bs=1k seek=3968 oflag=sync conv=notrunc
 	# copy boot firmware to SOC specific offset for eMMC boot0 partition
 	cp firmware.img firmware-venice-imx8mm.img
 	dd if=venice-imx8mm-flash.bin of=firmware-venice-imx8mm.img bs=1k seek=33 oflag=sync conv=notrunc
@@ -189,7 +192,10 @@ ubuntu-image: linux/arch/arm64/boot/Image $(UBUNTU_FS) mkimage_jtag firmware-ima
 	# uboot for imx8mm users that have boot firmware on emmc user partition
 	# do not brick their board
 	dd if=venice-imx8mm-flash.bin of=$(UBUNTU_IMG) bs=1k seek=33 oflag=sync conv=notrunc
+	# copy uboot env to where U-Boot expects it (top of 4MiB)
 	dd if=uboot-env.bin of=$(UBUNTU_IMG) bs=1k seek=4032 oflag=sync conv=notrunc
+	# copy backup of uboot env right underneath it (to allow easy restore of env)
+	dd if=uboot-env.bin of=$(UBUNTU_IMG) bs=1k seek=3968 oflag=sync conv=notrunc
 	# compress
 	gzip -f $(UBUNTU_IMG)
 
