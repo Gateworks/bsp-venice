@@ -159,6 +159,10 @@ linux-venice.tar.xz: linux/arch/arm64/boot/Image venice-imx8mm-flash.bin
 	mkdir -p build/linux/usr/local/bin/
 	cp nrc7292/package/src/cli_app/cli_app \
 		build/linux/usr/local/bin/
+	# newracom nrc7292 module params
+	mkdir -p build/linux/etc/modprobe.d
+	echo "options nrc fw_name=nrc7292_cspi.bin bd_name=nrc7292_bd.dat spi_polling_interval=5" \
+		> build/linux/etc/modprobe.d/nrc.conf
 	# FTDI USB-SPI driver
 	make -C ftdi-usb-spi \
 		KDIR=$(PWD)/linux INSTALL_MOD_PATH=$(PWD)/build/linux \
