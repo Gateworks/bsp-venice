@@ -140,9 +140,17 @@ linux-venice.tar.xz: linux/arch/arm64/boot/Image venice-imx8mm-flash.bin
 	# install kernel modules
 	make -C linux INSTALL_MOD_STRIP=1 INSTALL_MOD_PATH=../build/linux modules_install
 	find build/linux/lib/modules/ -name build -exec rm {} \; # remove the bogus symlink
-	#install user space linux headers
+	# install user space linux headers
 	make -C linux INSTALL_HDR_PATH=../build/linux/usr headers_install
-	# neramcom nrc7292 firmware
+	# cryptodev-linux build/install
+	make -C cryptodev-linux KERNEL_DIR=../linux
+	make -C cryptodev-linux KERNEL_DIR=../linux DESTDIR=../build/linux \
+		INSTALL_MOD_PATH=../build/linux install
+	# newracom nrc7292 802.11ah driver
+	make -C nrc7292/package/src/nrc/ KDIR=$(PWD)/linux modules
+	make -C nrc7292/package/src/nrc/ KDIR=$(PWD)/linux \
+		INSTALL_MOD_PATH=$(PWD)/build/linux modules_install
+	# newracom nrc7292 firmware
 	mkdir -p build/linux/lib/firmware
 	cp nrc7292/package/evk/sw_pkg/nrc_pkg/sw/firmware/nrc7292_* \
 		build/linux/lib/firmware/
