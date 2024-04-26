@@ -170,6 +170,13 @@ linux-venice.tar.xz: linux/arch/arm64/boot/Image venice-imx8mm-flash.bin
 		modules modules_install
 	# install kernel headers needed for building external modules ( aka linux-devel )
 	./venice/configure_kernel_headers.sh $(PWD)/linux $(PWD)/build/linux
+	# execute any user kernel customization scripts (passing them kernel dir and install dir) before tarball
+	@for file in ./custom_kernel*; do \
+		if [ -x $${file} ]; then \
+			echo "Executing: $${file} \"$(PWD)/linux\" \"$(PWD)/build/linux\""; \
+			$${file} "$(PWD)/linux" "$(PWD)/build/linux"; \
+		fi; \
+	done
 	# tarball
 	tar -cvJf linux-venice.tar.xz --numeric-owner --owner=0 --group=0 \
 		-C build/linux .
@@ -183,18 +190,28 @@ UBUNTU_IMG ?= $(UBUNTU_REL)-venice.img
 $(UBUNTU_REL)-venice.tar.xz:
 	wget -N http://dev.gateworks.com/ubuntu/$(UBUNTU_REL)/$(UBUNTU_REL)-venice.tar.xz
 $(UBUNTU_FS): linux-venice.tar.xz $(UBUNTU_REL)-venice.tar.xz
-	# root filesystem
+	# create root filesystem from a series of tarballs and/or directories
 	sudo ./venice/mkfs ext4 $(UBUNTU_FS) $(UBUNTU_FSSZMB)M \
 		$(UBUNTU_REL)-venice.tar.xz linux-venice.tar.xz || exit 1
-.PHONY: ubuntu-image
-ubuntu-image: linux/arch/arm64/boot/Image $(UBUNTU_FS) mkimage_jtag firmware-image
-	# create U-Boot bootscript
+	# mount it for further customiztions
 	$(eval TMP=$(shell mktemp -d -t tmp.XXXXXX))
 	sudo mount $(UBUNTU_FS) $(TMP) || exit 1
+	# create U-Boot bootscript
 	sudo u-boot/tools/mkimage -A $(ARCH) -T script -C none \
 		-d venice/boot.scr $(TMP)/boot/boot.scr
+	# execute any user rootfs customization scripts (passing them rootfs directory) before copying to image
+	@for file in ./custom_rootfs*; do \
+		if [ -x $${file} ]; then \
+			echo "Executing: $${file}} \"$(TMP)\""; \
+			sudo $${file} "$(TMP)"; \
+		fi; \
+	done
+	# unmount rootfs
 	sudo umount $(TMP) || exit 1
 	rmdir $(TMP)
+
+.PHONY: ubuntu-image
+ubuntu-image: linux/arch/arm64/boot/Image $(UBUNTU_FS) mkimage_jtag firmware-image
 	# disk image
 	truncate -s $$(($(UBUNTU_FSSZMB) + $(PART_OFFSETMB)))M $(UBUNTU_IMG)
 	dd if=$(UBUNTU_FS) of=$(UBUNTU_IMG) bs=1M seek=$(PART_OFFSETMB)
@@ -208,6 +225,13 @@ ubuntu-image: linux/arch/arm64/boot/Image $(UBUNTU_FS) mkimage_jtag firmware-ima
 	dd if=uboot-env.bin of=$(UBUNTU_IMG) bs=1k seek=4032 oflag=sync conv=notrunc
 	# copy backup of uboot env right underneath it (to allow easy restore of env)
 	dd if=uboot-env.bin of=$(UBUNTU_IMG) bs=1k seek=3968 oflag=sync conv=notrunc
+	# execute any user image customization scripts (passing disk image) before compressing
+	@for file in ./custom_image*; do \
+		if [ -x $${file} ]; then \
+			echo "Executing: $${file} \"$(PWD)/$(UBUNTU_IMG)\""; \
+			$${file} "$(PWD)/$(UBUNTU_IMG)"; \
+		fi; \
+	done
 	# compress
 	gzip -f $(UBUNTU_IMG)
 
