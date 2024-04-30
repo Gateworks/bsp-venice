@@ -174,7 +174,7 @@ linux-venice.tar.xz: linux/arch/arm64/boot/Image venice-imx8mm-flash.bin
 	@for file in ./custom_kernel*; do \
 		if [ -x $${file} ]; then \
 			echo "Executing: $${file} \"$(PWD)/linux\" \"$(PWD)/build/linux\""; \
-			$${file} "$(PWD)/linux" "$(PWD)/build/linux"; \
+			$${file} "$(PWD)/linux" "$(PWD)/build/linux" || { echo "$${file}} failed"; exit 1; } \
 		fi; \
 	done
 	# tarball
@@ -193,22 +193,24 @@ $(UBUNTU_FS): linux-venice.tar.xz $(UBUNTU_REL)-venice.tar.xz
 	# create root filesystem from a series of tarballs and/or directories
 	sudo ./venice/mkfs ext4 $(UBUNTU_FS) $(UBUNTU_FSSZMB)M \
 		$(UBUNTU_REL)-venice.tar.xz linux-venice.tar.xz || exit 1
+	sudo chmod 666 $(UBUNTU_FS)
 	# mount it for further customiztions
 	$(eval TMP=$(shell mktemp -d -t tmp.XXXXXX))
 	sudo mount $(UBUNTU_FS) $(TMP) || exit 1
 	# create U-Boot bootscript
 	sudo u-boot/tools/mkimage -A $(ARCH) -T script -C none \
 		-d venice/boot.scr $(TMP)/boot/boot.scr
-	# execute any user rootfs customization scripts (passing them rootfs directory) before copying to image
+	sudo umount $(TMP) || exit 1
+	rmdir $(TMP)
+	# execute any user rootfs customization scripts (passing them the fs image) before copying to image
+	# note you can use e2cp, e2mkdir, etc from the e2tools directly on the image without mounting
 	@for file in ./custom_rootfs*; do \
 		if [ -x $${file} ]; then \
 			echo "Executing: $${file}} \"$(TMP)\""; \
-			sudo $${file} "$(TMP)"; \
+			$${file} "$(UBUNTU_FS)" || { echo "$${file}} failed"; exit 1; } \
 		fi; \
 	done
 	# unmount rootfs
-	sudo umount $(TMP) || exit 1
-	rmdir $(TMP)
 
 .PHONY: ubuntu-image
 ubuntu-image: linux/arch/arm64/boot/Image $(UBUNTU_FS) mkimage_jtag firmware-image
@@ -229,7 +231,7 @@ ubuntu-image: linux/arch/arm64/boot/Image $(UBUNTU_FS) mkimage_jtag firmware-ima
 	@for file in ./custom_image*; do \
 		if [ -x $${file} ]; then \
 			echo "Executing: $${file} \"$(PWD)/$(UBUNTU_IMG)\""; \
-			$${file} "$(PWD)/$(UBUNTU_IMG)"; \
+			$${file} "$(PWD)/$(UBUNTU_IMG)" || { echo "$${file}} failed"; exit 1; } \
 		fi; \
 	done
 	# compress
