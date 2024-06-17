@@ -184,7 +184,7 @@ linux-venice.tar.xz: linux/arch/arm64/boot/Image venice-imx8mm-flash.bin
 # ubuntu
 PART_OFFSETMB ?= 16
 UBUNTU_FSSZMB ?= 2560
-UBUNTU_REL ?= jammy
+UBUNTU_REL ?= noble
 UBUNTU_FS ?= $(UBUNTU_REL)-venice.ext4
 UBUNTU_IMG ?= $(UBUNTU_REL)-venice.img
 $(UBUNTU_REL)-venice.tar.xz:
