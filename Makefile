@@ -137,6 +137,8 @@ linux-venice.tar.xz: linux/arch/arm64/boot/Image venice-imx8mm-flash.bin
 		-d linux/arch/arm64/boot/Image.gz build/linux/boot/kernel.itb
 	# install dtbs
 	cp linux/arch/arm64/boot/dts/freescale/imx8*-venice-*.dtb* build/linux/boot
+	# install bootscript
+	u-boot/tools/mkimage -A $(ARCH) -T script -C none -d venice/boot.scr build/linux/boot/boot.scr
 	# install kernel modules
 	make -C linux INSTALL_MOD_STRIP=1 INSTALL_MOD_PATH=../build/linux modules_install
 	find build/linux/lib/modules/ -name build -exec rm {} \; # remove the bogus symlink
@@ -183,25 +185,52 @@ linux-venice.tar.xz: linux/arch/arm64/boot/Image venice-imx8mm-flash.bin
 
 # ubuntu
 PART_OFFSETMB ?= 16
-UBUNTU_FSSZMB ?= 2560
 UBUNTU_REL ?= noble
 UBUNTU_FS ?= $(UBUNTU_REL)-venice.ext4
 UBUNTU_IMG ?= $(UBUNTU_REL)-venice.img
-$(UBUNTU_REL)-venice.tar.xz:
-	wget -N http://dev.gateworks.com/ubuntu/$(UBUNTU_REL)/$(UBUNTU_REL)-venice.tar.xz
-$(UBUNTU_FS): linux-venice.tar.xz $(UBUNTU_REL)-venice.tar.xz
-	# create root filesystem from a series of tarballs and/or directories
-	sudo ./venice/mkfs ext4 $(UBUNTU_FS) $(UBUNTU_FSSZMB)M \
-		$(UBUNTU_REL)-venice.tar.xz linux-venice.tar.xz || exit 1
-	sudo chmod 666 $(UBUNTU_FS)
-	# mount it for further customiztions
-	$(eval TMP=$(shell mktemp -d -t tmp.XXXXXX))
-	sudo mount $(UBUNTU_FS) $(TMP) || exit 1
-	# create U-Boot bootscript
-	sudo u-boot/tools/mkimage -A $(ARCH) -T script -C none \
-		-d venice/boot.scr $(TMP)/boot/boot.scr
-	sudo umount $(TMP) || exit 1
-	rmdir $(TMP)
+
+.PHONY: ubuntu-image
+ubuntu-image: linux/arch/arm64/boot/Image mkimage_jtag firmware-image
+	# fetch pre-built ubuntu base rootfs (missing kernel)
+	wget -N http://dev.gateworks.com/ubuntu/$(UBUNTU_REL)/$(UBUNTU_FS).xz
+	# filesystem
+	xz --force --keep --decompress $(UBUNTU_FS).xz
+	# resize ext filesystem if needed in order to fit files in linux/install
+	# we use du -bc to determine size needed and bump it by 10% (*11/10)
+	@( \
+		set -e; \
+		blocksize=$$(e2freefrag $(UBUNTU_FS) | grep "Blocksize:" | cut -d" " -f2); \
+		blockstotal=$$(e2freefrag $(UBUNTU_FS) | grep "Total blocks:" | cut -d" " -f3); \
+		blocksavail=$$(e2freefrag $(UBUNTU_FS) | grep "Free blocks:" | cut -d" " -f3); \
+		bytesneeded=$$(du -bc build/linux/ | tail -1 | cut -f1); \
+		mbytesneeded=$$(expr $$bytesneeded / 1024 / 1024 \* 11 / 10); \
+		mbytesavail=$$(expr $$blocksize \* $$blocksavail / 1024 / 1024); \
+		mbytestotal=$$(expr $$blocksize \* $$blockstotal / 1024 / 1024); \
+		resizeto=$$(expr $$mbytestotal + $$mbytesneeded); \
+		echo "$(UBUNTU_FS): avail:$${mbytesavail}M/$${mbytestotal}M needed:$${mbytesneeded}M";\
+		if [ $$mbytesneeded -ge $$mbytesavail ]; then \
+			echo "resizing $${mbytestotal}M to $${resizeto}M..."; \
+			e2fsck -f $(UBUNTU_FS); \
+			resize2fs $(UBUNTU_FS) $${resizeto}M; \
+		fi; \
+	)
+	# iterate over kernel install dir creating dirs and copying files
+	@( \
+		set -e; \
+		cd build/linux; \
+		for i in `find`; do \
+			if [ -d $$i ]; then \
+				e2mkdir -G 0 -O 0 ../../$(UBUNTU_FS):$$i; \
+			fi; \
+			if [ -f $$i ]; then \
+				if [ -x $$i ]; then \
+					e2cp -G 0 -O 0 -P 755 $$i ../../$(UBUNTU_FS):`dirname $$i`; \
+				else \
+					e2cp -G 0 -O 0 $$i ../../$(UBUNTU_FS):`dirname $$i`; \
+				fi; \
+			fi; \
+		done; \
+	)
 	# execute any user rootfs customization scripts (passing them the fs image) before copying to image
 	# note you can use e2cp, e2mkdir, etc from the e2tools directly on the image without mounting
 	@for file in ./custom_rootfs*; do \
@@ -210,12 +239,14 @@ $(UBUNTU_FS): linux-venice.tar.xz $(UBUNTU_REL)-venice.tar.xz
 			$${file} "$(UBUNTU_FS)" || { echo "$${file}} failed"; exit 1; } \
 		fi; \
 	done
-	# unmount rootfs
-
-.PHONY: ubuntu-image
-ubuntu-image: linux/arch/arm64/boot/Image $(UBUNTU_FS) mkimage_jtag firmware-image
 	# disk image
-	truncate -s $$(($(UBUNTU_FSSZMB) + $(PART_OFFSETMB)))M $(UBUNTU_IMG)
+	@( \
+		set -e; \
+		sizebytes=$$(stat --format=%s $(UBUNTU_FS)); \
+		sizemb=$$(expr $$sizebytes / 1024 / 1024); \
+		truncate -s $$(expr $$sizemb + $(PART_OFFSETMB))M $(UBUNTU_IMG); \
+	)
+	ls -l $(UBUNTU_IMG)
 	dd if=$(UBUNTU_FS) of=$(UBUNTU_IMG) bs=1M seek=$(PART_OFFSETMB)
 	# partition table
 	printf "$$(($(PART_OFFSETMB)*2*1024)),,L,*" | sfdisk -uS $(UBUNTU_IMG)
