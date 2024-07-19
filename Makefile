@@ -3,6 +3,10 @@ SHELL = /bin/sh
 .PHONY: all
 all: ubuntu-image
 
+REQUIRED_BINS = truncate xz tar wget gzip dd du sfdisk stat e2fsck e2cp e2mkdir e2freefrag
+K := $(foreach bin,$(REQUIRED_BINS),\
+	$(if $(shell command -v $(bin) 2> /dev/null),$(info Found $(bin)),$(error "No $(bin) in PATH")))
+
 # Toolchain
 .PHONY: toolchain
 toolchain: buildroot/output/host/bin/aarch64-linux-gcc
