@@ -110,6 +110,21 @@ firmware-image: venice-imx8mm-flash.bin venice-imx8mn-flash.bin venice-imx8mp-fl
 
 # kernel
 KVER = $(shell cd linux; $(MAKE) kernelversion)
+KMAJ = $(shell echo $(KVER) | \
+       sed -e 's/^\([0-9][0-9]*\)\.[0-9][0-9]*\.[0-9][0-9]*.*/\1/')
+KMIN = $(shell echo $(KVER) | \
+       sed -e 's/^[0-9][0-9]*\.\([0-9][0-9]*\)\.[0-9][0-9]*.*/\1/')
+KREV = $(shell echo $(KVER) | \
+       sed -e 's/^[0-9][0-9]*\.[0-9][0-9]*\.\([0-9][0-9]*\).*/\1/')
+kver_ge = $(shell \
+	  echo test | awk '{if($(KMAJ) < $(1)) {print 0} else { \
+	  if($(KMAJ) > $(1)) {print 1} else { \
+	  if($(KMIN) < $(2)) {print 0} else { \
+	  if($(KMIN) > $(2)) {print 1} else { \
+	  if($(KREV) < $(3)) {print 0} else { print 1 } \
+	  }}}}}' \
+	  )
+
 .PHONY: linux
 linux: linux/arch/arm64/boot/Image
 linux/arch/arm64/boot/Image: toolchain
