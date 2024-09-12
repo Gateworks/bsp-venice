@@ -81,7 +81,7 @@ u-boot/tools/env/fw_setenv:
 	$(MAKE) CROSS_COMPILE= -C u-boot imx8mm_venice_defconfig envtools
 	ln -sf fw_printenv u-boot/tools/env/fw_setenv
 
-u-boot-env.bin: venice/fw_env.config venice/venice.env
+uboot-env.bin: venice/fw_env.config venice/venice.env
 	# start with uboot env at end of 4MiB (per venice/fw_env.config)
 	truncate -s 4M firmware.img
 	u-boot/tools/env/fw_setenv --lock venice/. --config venice/fw_env.config --script venice/venice.env
