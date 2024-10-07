@@ -42,7 +42,7 @@ mkimage_jtag:
 	chmod +x mkimage_jtag
 
 # uboot
-.NOTPARALLEL: venice-imx8mm-flash.bin imx8mn-flash.bin imx8mp-flash.bin uboot-envtools
+.NOTPARALLEL: venice-imx8mm-flash.bin imx8mn-flash.bin imx8mp-flash.bin
 .PHONY: uboot
 uboot: venice-imx8mm-flash.bin venice-imx8mn-flash.bin venice-imx8mp-flash.bin
 venice-imx8mm-flash.bin: toolchain atf ddr-firmware mkimage_jtag
@@ -75,13 +75,10 @@ venice-imx8mp-flash.bin: toolchain atf ddr-firmware mkimage_jtag
 	$(MAKE) -C u-boot flash.bin
 	cp u-boot/flash.bin venice-imx8mp-flash.bin
 
-.PHONY: uboot-envtools
-uboot-envtools: u-boot/tools/env/fw_setenv
-u-boot/tools/env/fw_setenv:
+uboot-env.bin: venice/fw_env.config venice/venice.env
+	# build envtools
 	$(MAKE) CROSS_COMPILE= -C u-boot imx8mm_venice_defconfig envtools
 	ln -sf fw_printenv u-boot/tools/env/fw_setenv
-
-uboot-env.bin: venice/fw_env.config venice/venice.env
 	# start with uboot env at end of 4MiB (per venice/fw_env.config)
 	truncate -s 4M firmware.img
 	u-boot/tools/env/fw_setenv --lock venice/. --config venice/fw_env.config --script venice/venice.env
@@ -90,7 +87,7 @@ uboot-env.bin: venice/fw_env.config venice/venice.env
 
 # JTAG images of boot firmware only and boot firmware + environment
 .PHONY: firmware-image
-firmware-image: venice-imx8mm-flash.bin venice-imx8mn-flash.bin venice-imx8mp-flash.bin uboot-env.bin uboot-envtools
+firmware-image: venice-imx8mm-flash.bin venice-imx8mn-flash.bin venice-imx8mp-flash.bin uboot-env.bin
 	# start with uboot env at end of 4MiB (per venice/fw_env.config)
 	truncate -s 4M firmware.img
 	dd if=uboot-env.bin of=firmware.img bs=1k seek=4032 oflag=sync conv=notrunc
