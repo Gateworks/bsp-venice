@@ -109,6 +109,8 @@ firmware-image: venice-imx8mm-flash.bin venice-imx8mn-flash.bin venice-imx8mp-fl
 	rm firmware.img
 
 # kernel
+LINUX_DEFCONFIG ?= imx8m_venice_defconfig
+
 KVER = $(shell cd linux; $(MAKE) kernelversion)
 KMAJ = $(shell echo $(KVER) | \
        sed -e 's/^\([0-9][0-9]*\)\.[0-9][0-9]*\.[0-9][0-9]*.*/\1/')
@@ -131,7 +133,7 @@ linux/arch/arm64/boot/Image: toolchain
 	[ -r linux/arch/arm64/configs/imx8m_venice_defconfig ] || { \
 		ln -s imx8mm_venice_defconfig linux/arch/arm64/configs/imx8m_venice_defconfig; \
 	}
-	$(MAKE) -C linux imx8m_venice_defconfig
+	$(MAKE) -C linux $(LINUX_DEFCONFIG)
 ifeq ($(shell expr ${KVER} == "5.15.15"),1)
 	$(MAKE) DTC_FLAGS="-@" -C linux Image dtbs modules
 else
