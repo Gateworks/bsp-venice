@@ -164,6 +164,7 @@ linux-venice.tar.xz: linux/arch/arm64/boot/Image venice-imx8mm-flash.bin
 	make -C cryptodev-linux KERNEL_DIR=../linux
 	make -C cryptodev-linux KERNEL_DIR=../linux DESTDIR=../build/linux \
 		INSTALL_MOD_PATH=../build/linux install
+ifeq ($(call kver_ge,6,7,0),0)
 	# newracom nrc7292 802.11ah driver
 	make -C nrc7292/package/src/nrc/ KDIR=$(PWD)/linux modules
 	make -C nrc7292/package/src/nrc/ KDIR=$(PWD)/linux \
@@ -186,6 +187,7 @@ linux-venice.tar.xz: linux/arch/arm64/boot/Image venice-imx8mm-flash.bin
 		KDIR=$(PWD)/linux INSTALL_MOD_PATH=$(PWD)/build/linux \
 		INSTALL_MOD_STRIP=1 \
 		modules modules_install
+endif
 	# install kernel headers needed for building external modules ( aka linux-devel )
 	./venice/configure_kernel_headers.sh $(PWD)/linux $(PWD)/build/linux
 	# execute any user kernel customization scripts (passing them kernel dir and install dir) before tarball
