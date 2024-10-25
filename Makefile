@@ -12,12 +12,7 @@ K := $(foreach bin,$(REQUIRED_BINS),\
 toolchain: buildroot/output/host/bin/aarch64-linux-gcc
 buildroot/output/host/bin/aarch64-linux-gcc:
 	$(MAKE) -C buildroot imx8mm_venice_defconfig
-	$(MAKE) -C buildroot toolchain
-
-# Buildroot
-.PHONY: buildroot
-buildroot:
-	$(MAKE) -C buildroot imx8mm_venice_defconfig all
+	$(MAKE) -C buildroot all
 
 # ddr-firmware
 DDR_FIRMWARE_URL:=https://www.nxp.com/lgfiles/NMG/MAD/YOCTO

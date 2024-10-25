@@ -1,0 +1,42 @@
+From 2249f4c0a5ea9eaa3d3f1c1aa33843abf1dfd854 Mon Sep 17 00:00:00 2001
+From: Tim Harvey <tharvey@gateworks.com>
+Date: Fri, 13 Sep 2024 17:34:21 +0000
+Subject: [PATCH] create_subdir: Resize if the parent dir runs out of space
+
+If ext2fs_link() fails with the error EXT2_ET_DIR_NO_SPACE the calling
+program needs to call ext2fs_expand_dir() and then retry the call to
+ext2fs_link().
+
+Signed-off-by: Tim Harvey <tharvey@gateworks.com>
+---
+ mkdir.c | 14 ++++++++++++--
+ 1 file changed, 12 insertions(+), 2 deletions(-)
+
+diff --git a/mkdir.c b/mkdir.c
+index dddeb07..65d207b 100644
+--- a/mkdir.c
++++ b/mkdir.c
+@@ -494,8 +494,18 @@ long create_subdir(ext2_filsys fs, ext2_ino_t root, ext2_ino_t *cwd,
+   /* now create the directory */
+   if ((retval = ext2fs_mkdir(fs, parent, child, dirname)))
+     {
+-      fprintf(stderr, "%s\n", error_message(retval));
+-      return retval;
++	if (retval == EXT2_ET_DIR_NO_SPACE) {
++		if ((retval = ext2fs_expand_dir(fs, parent))) {
++			fprintf(stderr, "%s\n", error_message(retval));
++			return retval;
++		}
++		if ((retval = ext2fs_mkdir(fs, parent, child, dirname)))
++		{
++			fprintf(stderr, "%s\n", error_message(retval));
++			return retval;
++		}
++	} else
++		return retval;
+     }
+ 
+   *cwd = child;
+-- 
+2.34.1
+
