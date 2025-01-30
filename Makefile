@@ -70,20 +70,14 @@ venice-imx8mp-flash.bin: toolchain atf ddr-firmware mkimage_jtag
 	$(MAKE) -C u-boot flash.bin
 	cp u-boot/flash.bin venice-imx8mp-flash.bin
 
-uboot-env.bin: venice/fw_env.config venice/venice.env
-	# build envtools
-	$(MAKE) CROSS_COMPILE= -C u-boot imx8mm_venice_defconfig envtools
-	ln -sf fw_printenv u-boot/tools/env/fw_setenv
-	# start with uboot env at end of 4MiB (per venice/fw_env.config)
-	truncate -s 4M firmware.img
-	u-boot/tools/env/fw_setenv --lock venice/. --config venice/fw_env.config --script venice/venice.env
-	# keep copy of env as uboot-env.bin to use later
-	dd if=firmware.img of=uboot-env.bin bs=1k skip=4032 count=64 oflag=sync
+# U-Boot env
+uboot-env.bin: venice/venice.env
+	u-boot/tools/mkenvimage -r -s 0x8000 -o uboot-env.bin venice/venice.env
 
 # JTAG images of boot firmware only and boot firmware + environment
 .PHONY: firmware-image
 firmware-image: venice-imx8mm-flash.bin venice-imx8mn-flash.bin venice-imx8mp-flash.bin uboot-env.bin
-	# start with uboot env at end of 4MiB (per venice/fw_env.config)
+	# start with redundant uboot env at end of 4MiB
 	truncate -s 4M firmware.img
 	dd if=uboot-env.bin of=firmware.img bs=1k seek=4032 oflag=sync conv=notrunc
 	# copy backup of uboot env right underneath default env (to allow easy restore of env)
