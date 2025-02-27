@@ -1,4 +1,6 @@
 #!/bin/bash
+set -e
+set -x
 # linux-devel package creation (to generate headers etc needed to build kernel modules against)
 arch=$ARCH
 KDIR=$1
@@ -39,7 +41,6 @@ echo "Installing KConfig files..."
 find . -name 'Kconfig*' -exec install -Dm644 {} "$builddir/{}" \;
 
 echo "Removing unneeded architectures..."
-local arch
 for arch in "$builddir"/arch/*/; do
   [[ $arch = */arm64/ ]] && continue
   echo "Removing $(basename "$arch")"
@@ -56,7 +57,6 @@ echo "Removing loose objects..."
 find "$builddir" -type f -name '*.o' -printf 'Removing %P\n' -delete
 
 echo "Stripping build tools..."
-local file
 while read -rd '' file; do
   case "$(file -Sib "$file")" in
     application/x-sharedlib\;*)      # Libraries (.so)
@@ -74,10 +74,32 @@ done < <(find "$builddir" -type f -perm -u+x ! -name vmlinux -print0)
 rm $builddir/vmlinux
 
 if [ "$CROSS_COMPILE" ]; then
-    # Required compilation steps
-    echo "Cross-Compiling important build tools..."
-    (cd "$builddir/scripts/basic" && ${CROSS_COMPILE}gcc --static -o fixdep fixdep.c)
-    (cd "$builddir/scripts/mod" && ${CROSS_COMPILE}gcc --static -o modpost modpost.c sumversion.c file2alias.c)
+	# Required compilation steps
+	echo "Cross-Compiling important build tools..."
+	case "$KVER" in
+	6.6*)
+		echo "Building fixdep/modpost for 6.6..."
+		(cd "$builddir/scripts/basic" && \
+			${CROSS_COMPILE}gcc --static fixdep.c -o fixdep && \
+			find . -type f -not -name fixdep -delete
+		)
+		(cd "$builddir/scripts/mod" && \
+			${CROSS_COMPILE}gcc --static modpost.c sumversion.c file2alias.c -o modpost && \
+			find . -type f -not -name modpost -delete
+		)
+		;;
+	6.12*)
+		echo "Building fixdep/modpost for 6.12..."
+		(cd "$builddir/scripts/basic" && \
+			${CROSS_COMPILE}gcc --static -I../include fixdep.c -o fixdep && \
+			find . -type f -not -name fixdep -delete
+		)
+		(cd "$builddir/scripts/mod" && \
+			${CROSS_COMPILE}gcc --static -I../include modpost.c sumversion.c file2alias.c symsearch.c -o modpost && \
+			find . -type f -not -name modpost -delete
+		)
+		;;
+	esac
 fi
 
 echo "Finished creating Linux-headers-gateworks"
