@@ -156,7 +156,7 @@ linux-venice.tar.xz: linux/arch/arm64/boot/Image venice-imx8mm-flash.bin
 	make -C cryptodev-linux KERNEL_DIR=../linux
 	make -C cryptodev-linux KERNEL_DIR=../linux DESTDIR=../build/linux \
 		INSTALL_MOD_PATH=../build/linux install
-ifeq ($(call kver_ge,6,7,0),0)
+ifeq ($(call kver_ge,6,13,0),0)
 	# newracom nrc7292 802.11ah driver
 	make -C nrc7292/package/src/nrc/ KDIR=$(PWD)/linux modules
 	make -C nrc7292/package/src/nrc/ KDIR=$(PWD)/linux \
