@@ -148,25 +148,25 @@ linux-venice.tar.xz: linux/arch/arm64/boot/Image venice-imx8mm-flash.bin
 	# install bootscript
 	u-boot/tools/mkimage -A $(ARCH) -T script -C none -d venice/boot.scr build/linux/boot/boot.scr
 	# install kernel modules
-	make -C linux INSTALL_MOD_STRIP=1 INSTALL_MOD_PATH=../build/linux modules_install
+	$(MAKE) -C linux INSTALL_MOD_STRIP=1 INSTALL_MOD_PATH=../build/linux modules_install
 	find build/linux/lib/modules/ -name build -exec rm {} \; # remove the bogus symlink
 	# install user space linux headers
-	make -C linux INSTALL_HDR_PATH=../build/linux/usr headers_install
+	$(MAKE) -C linux INSTALL_HDR_PATH=../build/linux/usr headers_install
 	# cryptodev-linux build/install
-	make -C cryptodev-linux KERNEL_DIR=../linux
-	make -C cryptodev-linux KERNEL_DIR=../linux DESTDIR=../build/linux \
+	$(MAKE) -C cryptodev-linux KERNEL_DIR=../linux
+	$(MAKE) -C cryptodev-linux KERNEL_DIR=../linux DESTDIR=../build/linux \
 		INSTALL_MOD_PATH=../build/linux install
 ifeq ($(call kver_ge,6,13,0),0)
 	# newracom nrc7292 802.11ah driver
-	make -C nrc7292/package/src/nrc/ KDIR=$(PWD)/linux modules
-	make -C nrc7292/package/src/nrc/ KDIR=$(PWD)/linux \
+	$(MAKE) -C nrc7292/package/src/nrc/ KDIR=$(PWD)/linux modules
+	$(MAKE) -C nrc7292/package/src/nrc/ KDIR=$(PWD)/linux \
 		INSTALL_MOD_PATH=$(PWD)/build/linux modules_install
 	# newracom nrc7292 firmware
 	mkdir -p build/linux/lib/firmware
 	cp nrc7292/package/evk/sw_pkg/nrc_pkg/sw/firmware/nrc7292_* \
 		build/linux/lib/firmware/
 	# newracom nrc7292 cli app
-	make CC=$(CROSS_COMPILE)gcc LFLAGS=-static -C nrc7292/package/src/cli_app/
+	$(MAKE) CC=$(CROSS_COMPILE)gcc LFLAGS=-static -C nrc7292/package/src/cli_app/
 	mkdir -p build/linux/usr/local/bin/
 	cp nrc7292/package/src/cli_app/cli_app \
 		build/linux/usr/local/bin/
@@ -175,7 +175,7 @@ ifeq ($(call kver_ge,6,13,0),0)
 	echo "options nrc fw_name=nrc7292_cspi.bin bd_name=nrc7292_bd.dat spi_polling_interval=5" \
 		> build/linux/etc/modprobe.d/nrc.conf
 	# FTDI USB-SPI driver
-	make -C ftdi-usb-spi \
+	$(MAKE) -C ftdi-usb-spi \
 		KDIR=$(PWD)/linux INSTALL_MOD_PATH=$(PWD)/build/linux \
 		INSTALL_MOD_STRIP=1 \
 		modules modules_install
@@ -280,13 +280,13 @@ ubuntu-image: linux-venice.tar.xz mkimage_jtag venice-imx8mm-flash.bin uboot-env
 
 .PHONY: clean
 clean:
-	make -C u-boot clean
-	make -C atf PLAT=imx8mm clean
-	make -C atf PLAT=imx8mn clean
-	make -C atf PLAT=imx8mp clean
-	make -C linux clean
-	make -C cryptodev-linux KERNEL_DIR=../linux clean
-	make -C buildroot clean
+	$(MAKE) -C u-boot clean
+	$(MAKE) -C atf PLAT=imx8mm clean
+	$(MAKE) -C atf PLAT=imx8mn clean
+	$(MAKE) -C atf PLAT=imx8mp clean
+	$(MAKE) -C linux clean
+	$(MAKE) -C cryptodev-linux KERNEL_DIR=../linux clean
+	$(MAKE) -C buildroot clean
 	rm -f venice-*-flash.bin
 	rm -f firmware-venice-*.bin
 	rm -rf build
@@ -297,12 +297,12 @@ clean:
 
 .PHONY: distclean
 distclean:
-	make -C u-boot distclean
-	make -C atf PLAT=imx8mm distclean
-	make -C atf PLAT=imx8mn distclean
-	make -C atf PLAT=imx8mp distclean
-	make -C linux distclean
-	make -C buildroot distclean
+	$(MAKE) -C u-boot distclean
+	$(MAKE) -C atf PLAT=imx8mm distclean
+	$(MAKE) -C atf PLAT=imx8mn distclean
+	$(MAKE) -C atf PLAT=imx8mp distclean
+	$(MAKE) -C linux distclean
+	$(MAKE) -C buildroot distclean
 	rm -f venice-*-flash.bin
 	rm -f firmware-venice-*.bin
 	rm -rf build
