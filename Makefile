@@ -156,30 +156,6 @@ linux-venice.tar.xz: linux/arch/arm64/boot/Image venice-imx8mm-flash.bin
 	$(MAKE) -C cryptodev-linux KERNEL_DIR=../linux
 	$(MAKE) -C cryptodev-linux KERNEL_DIR=../linux DESTDIR=../build/linux \
 		INSTALL_MOD_PATH=../build/linux install
-ifeq ($(call kver_ge,6,13,0),0)
-	# newracom nrc7292 802.11ah driver
-	$(MAKE) -C nrc7292/package/src/nrc/ KDIR=$(PWD)/linux modules
-	$(MAKE) -C nrc7292/package/src/nrc/ KDIR=$(PWD)/linux \
-		INSTALL_MOD_PATH=$(PWD)/build/linux modules_install
-	# newracom nrc7292 firmware
-	mkdir -p build/linux/lib/firmware
-	cp nrc7292/package/evk/sw_pkg/nrc_pkg/sw/firmware/nrc7292_* \
-		build/linux/lib/firmware/
-	# newracom nrc7292 cli app
-	$(MAKE) CC=$(CROSS_COMPILE)gcc LFLAGS=-static -C nrc7292/package/src/cli_app/
-	mkdir -p build/linux/usr/local/bin/
-	cp nrc7292/package/src/cli_app/cli_app \
-		build/linux/usr/local/bin/
-	# newracom nrc7292 module params
-	mkdir -p build/linux/etc/modprobe.d
-	echo "options nrc fw_name=nrc7292_cspi.bin bd_name=nrc7292_bd.dat spi_polling_interval=5" \
-		> build/linux/etc/modprobe.d/nrc.conf
-	# FTDI USB-SPI driver
-	$(MAKE) -C ftdi-usb-spi \
-		KDIR=$(PWD)/linux INSTALL_MOD_PATH=$(PWD)/build/linux \
-		INSTALL_MOD_STRIP=1 \
-		modules modules_install
-endif
 	# install kernel headers needed for building external modules ( aka linux-devel )
 	./venice/configure_kernel_headers.sh $(PWD)/linux $(PWD)/build/linux
 	# execute any user kernel customization scripts (passing them kernel dir and install dir) before tarball
