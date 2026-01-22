@@ -78,7 +78,7 @@ if [ "$CROSS_COMPILE" ]; then
 	echo "Cross-Compiling important build tools..."
 	case "$KVER" in
 	6.6*)
-		echo "Building fixdep/modpost for 6.6..."
+		echo "Building fixdep/modpost for $KVER..."
 		(cd "$builddir/scripts/basic" && \
 			${CROSS_COMPILE}gcc --static fixdep.c -o fixdep && \
 			find . -type f -not -name fixdep -delete
@@ -88,8 +88,8 @@ if [ "$CROSS_COMPILE" ]; then
 			find . -type f -not -name modpost -delete
 		)
 		;;
-	6.12*)
-		echo "Building fixdep/modpost for 6.12..."
+	6.12*|6.18*)
+		echo "Building fixdep/modpost for $KVER..."
 		(cd "$builddir/scripts/basic" && \
 			${CROSS_COMPILE}gcc --static -I../include fixdep.c -o fixdep && \
 			find . -type f -not -name fixdep -delete
