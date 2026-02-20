@@ -221,8 +221,8 @@ ubuntu-image: linux-venice.tar.xz mkimage_jtag venice-imx8mm-flash.bin uboot-env
 	# note you can use e2cp, e2mkdir, etc from the e2tools directly on the image without mounting
 	@for file in ./custom_rootfs*; do \
 		if [ -x $${file} ]; then \
-			echo "Executing: $${file}} \"$(TMP)\""; \
-			$${file} "$(UBUNTU_FS)" || { echo "$${file}} failed"; exit 1; } \
+			echo "Executing: $${file} \"$(UBUNTU_FS)\""; \
+			$${file} "$(UBUNTU_FS)" || { echo "$${file} failed"; exit 1; } \
 		fi; \
 	done
 	# disk image
