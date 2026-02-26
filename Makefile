@@ -196,7 +196,7 @@ ubuntu-image: linux-venice.tar.xz mkimage_jtag venice-imx8mm-flash.bin uboot-env
 		echo "$(UBUNTU_FS): avail:$${mbytesavail}M/$${mbytestotal}M needed:$${mbytesneeded}M";\
 		if [ $$mbytesneeded -ge $$mbytesavail ]; then \
 			echo "resizing $${mbytestotal}M to $${resizeto}M..."; \
-			e2fsck -f $(UBUNTU_FS); \
+			e2fsck -fp $(UBUNTU_FS); \
 			resize2fs $(UBUNTU_FS) $${resizeto}M; \
 		fi; \
 	)
