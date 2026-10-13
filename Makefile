@@ -44,7 +44,7 @@ venice-imx8mm-flash.bin: toolchain atf ddr-firmware mkimage_jtag
 	for file in $(DDR_FIRMWARE_FILES); do \
 		cp $(DDR_FIRMWARE_VER)/firmware/ddr/synopsys/$${file} u-boot/; \
 	done
-	$(MAKE) -C atf PLAT=imx8mm bl31
+	$(MAKE) -C atf PLAT=imx8mm bl31 CFLAGS+=" --param=min-pagesize=0" LDFLAGS+=" --no-warn-rwx-segments"
 	ln -sf ../atf/build/imx8mm/release/bl31.bin u-boot/
 	$(MAKE) -C u-boot imx8mm_venice_defconfig
 	$(MAKE) -C u-boot flash.bin
@@ -54,7 +54,7 @@ venice-imx8mn-flash.bin: toolchain atf ddr-firmware mkimage_jtag
 	for file in $(DDR_FIRMWARE_FILES); do \
 		cp $(DDR_FIRMWARE_VER)/firmware/ddr/synopsys/$${file} u-boot/; \
 	done
-	$(MAKE) -C atf PLAT=imx8mn bl31
+	$(MAKE) -C atf PLAT=imx8mn bl31 CFLAGS+=" --param=min-pagesize=0" LDFLAGS+=" --no-warn-rwx-segments"
 	ln -sf ../atf/build/imx8mn/release/bl31.bin u-boot/
 	$(MAKE) -C u-boot imx8mn_venice_defconfig
 	$(MAKE) -C u-boot flash.bin
@@ -64,7 +64,7 @@ venice-imx8mp-flash.bin: toolchain atf ddr-firmware mkimage_jtag
 	for file in $(DDR_FIRMWARE_FILES); do \
 		cp $(DDR_FIRMWARE_VER)/firmware/ddr/synopsys/$${file} u-boot/; \
 	done
-	$(MAKE) -C atf PLAT=imx8mp bl31
+	$(MAKE) -C atf PLAT=imx8mp bl31 CFLAGS+=" --param=min-pagesize=0" LDFLAGS+=" --no-warn-rwx-segments"
 	ln -sf ../atf/build/imx8mp/release/bl31.bin u-boot/
 	$(MAKE) -C u-boot imx8mp_venice_defconfig
 	$(MAKE) -C u-boot flash.bin
